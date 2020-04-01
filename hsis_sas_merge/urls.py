@@ -1,3 +1,5 @@
+from hsis_sas_merge import views
+
 """hsis_sas_merge URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -18,4 +20,5 @@ from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', views.index),
 ]
