@@ -4,10 +4,8 @@ from django.conf import settings
 class AuthorInvitationForm(forms.Form):
 
     DATASET_CHOICES = [
-        ('doi1', 'NC 2014'),
-        ('doi2', 'NC 2015'),
-        ('doi3', 'NC 2016'),
-        ('doi4', 'NC 2017'),
+        ('doi:10.33563/FK2/ABQF9V', 'NC 2006'),
+        ('doi:10.33563/FK2/4ZOPY4', 'WA 2017'),
         ('other', 'other')
     ]
 

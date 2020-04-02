@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from hsis_sas_merge.forms import *
 from django.conf import settings
+from django.http import HttpResponse
 import requests
 import shutil
 import re
@@ -22,45 +23,41 @@ def index(request):
     form = AuthorInvitationForm(request.POST or None)
     if request.method == 'POST':
         if form.is_valid():
-            dataset = form.cleaned_data['dataset']
-            if(dataset == "other"):
-                dataset = form.cleaned_data['other_dataset']
+            dataset_doi = form.cleaned_data['dataset']
+            if(dataset_doi == "other"):
+                dataset_doi = form.cleaned_data['other_dataset']
         else:
             print(form.errors)
-
         print(settings.DATAVERSE_URL)
-        #Here download files from dataverse
-
-    download_dataset_files_helper("fake")
-
+        download_dataset_files_helper(dataset_doi)
+    
     return render(request, 'hsis-sas-merge/form_define_merge.html', {'form': form})
 
 #TODO: Move this to a util folder
 def download_dataset_files_helper(doi):
-    print("GO!")
-    doi_folder = ''.join(e for e in doi if e.isalnum()) #strips all special characters from doi. Good enough for prototype
-    download_file_helper(doi_folder, "https://highwaysafetytest.irss.unc.edu/api/access/datafile/16?format=original&gbrecs=true")
-    
+    dataset_json = requests.get(settings.DATAVERSE_URL+'/api/datasets/:persistentId/?persistentId='+doi).json()
+    print(dataset_json)
 
-    #So here I need to download the files.
-    #First I need to use the DOI to get all the files in the dataset
-    #Then My options then are to either download each one manually
-    # - https://dataverse5.odum.unc.edu/api/access/datafile/71?format=original&gbrecs=true
-    #Or do a bulk download and unzip
-    # - https://dataverse5.odum.unc.edu/api/access/datafiles/71,72?gbrecs=true&format=original
-    #
-    #Probably will do the first one
-    pass
+    folder_name_doi = ''.join(e for e in doi if e.isalnum()) #strips all special characters from doi. Good enough for prototype
 
+    # If folder exists don't attempt redownload. Good enough for prototype
+    # Until Dataverse 5 comes out you can't even get info on original files
+    # ... even when it comes out I don't think you can get the md5 on the original file
+    if(not os.path.isdir(settings.MEDIA_ROOT+'/'+folder_name_doi)): 
+        for file_json in dataset_json["data"]["latestVersion"]["files"]:
+            id = file_json["dataFile"]["id"]
+            download_file_helper(folder_name_doi, settings.DATAVERSE_URL+"/api/access/datafile/"+str(id)+"?format=original&gbrecs=true")
 
 def download_file_helper(folder_name, url):
     with requests.get(url, stream=True) as r:
         d = r.headers['content-disposition']
         fname = re.findall("filename=(.+)", d)[0].strip('\"')
         file_path = settings.MEDIA_ROOT+'/'+folder_name+'/'+fname
-        
+
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'wb') as f:
             shutil.copyfileobj(r.raw, f)
 
-    return fname
+def clear_all_downloads(request):
+    shutil.rmtree(settings.MEDIA_ROOT+'/')
+    return HttpResponse("Cleared "+settings.MEDIA_ROOT+'/')

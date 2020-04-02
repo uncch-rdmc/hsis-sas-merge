@@ -126,5 +126,5 @@ STATIC_URL = '/static/'
 MEDIA_ROOT = '/Users/madunlap/Documents/hsis_django_downloads'
 
 #HSIS APP SPECIFIC
-DATAVERSE_URL = 'https://dataverse5.odum.unc.edu/'
-DATAVERSE_API_TOKEN = ''
+DATAVERSE_URL = 'https://highwaysafetytest.irss.unc.edu'
+#DATAVERSE_API_TOKEN = ''
