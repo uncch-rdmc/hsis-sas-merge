@@ -19,6 +19,8 @@ import os
 #   - This will take time. I don't just want to request to spin. What's the best easy option?
 #       - Run an ajax post and when the files are ready a download will begin
 
+# ... Eh the ajax seems overkill. Just use a loading image like this: 
+# https://stackoverflow.com/questions/1853662/how-to-show-page-loading-div-until-the-page-has-finished-loading
 def index(request):
     form = AuthorInvitationForm(request.POST or None)
     if request.method == 'POST':
@@ -31,7 +33,7 @@ def index(request):
         print(settings.DATAVERSE_URL)
         download_dataset_files_helper(dataset_doi)
     
-    return render(request, 'hsis-sas-merge/form_define_merge.html', {'form': form})
+    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form})
 
 #TODO: Move this to a util folder
 def download_dataset_files_helper(doi):

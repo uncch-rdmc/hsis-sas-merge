@@ -119,8 +119,21 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
-
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
+
+STATICFILES_DIRS = [
+    '/Users/madunlap/Documents/GitHub/hsis-sas-merge/hsis_sas_merge/static'
+]
+
+STATIC_ROOT = os.path.join(BASE_DIR,'static')
+
+STATICFILES_FINDERS = (
+'django.contrib.staticfiles.finders.FileSystemFinder',
+'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+#'django.contrib.staticfiles.finders.DefaultStorageFinder',
+)
+
 
 #File download location
 MEDIA_ROOT = '/Users/madunlap/Documents/hsis_django_downloads'
