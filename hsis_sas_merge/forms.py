@@ -10,7 +10,7 @@ class AuthorInvitationForm(forms.Form):
     ]
 
     MERGE_SCRIPT_CHOICES = [
-        ('filename 1', 'Merge 1'),
+        ('NC_merging_data_for_2017_modifiedByAS.sas', 'NC Merging Data'),
         ('filename 2', 'Merge 1'),
     ]
 

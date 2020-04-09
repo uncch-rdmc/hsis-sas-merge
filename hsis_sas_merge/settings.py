@@ -140,4 +140,5 @@ MEDIA_ROOT = '/Users/madunlap/Documents/hsis_django_downloads'
 
 #HSIS APP SPECIFIC
 DATAVERSE_URL = 'https://highwaysafetytest.irss.unc.edu'
+SAS_UPLOAD_FOLDER = '/tmp/hsis_upload'
 #DATAVERSE_API_TOKEN = ''

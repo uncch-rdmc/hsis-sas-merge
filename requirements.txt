@@ -1,2 +1,3 @@
 requests==2.23.0
 Django==2.2.11
+saspy==3.3.5
