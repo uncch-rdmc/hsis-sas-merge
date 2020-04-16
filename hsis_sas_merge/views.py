@@ -20,6 +20,8 @@ import saspy
 #   - Could also just scp them to the server...
 #       - saspy has an upload command
 #           - We can use upload without override and clear all files if needed
+# - Before uploading the merge script, I need to edit what years it runs?
+#   - Maybe I can just pass an argument into the script... that would be so much better
 # - Run merge and return output
 #   - This will take time. I don't just want to request to spin. What's the best easy option?
 #       - Run an ajax post and when the files are ready a download will begin
@@ -28,7 +30,8 @@ import saspy
 # ... Eh the ajax seems overkill. Just use a loading image like this: 
 # https://stackoverflow.com/questions/1853662/how-to-show-page-loading-div-until-the-page-has-finished-loading
 def index(request):
-    form = AuthorInvitationForm(request.POST or None)
+    form = HSISMergeForm(request.POST or None)
+    dlpath = ''
     if request.method == 'POST':
         if form.is_valid():
             dataset_doi = form.cleaned_data['dataset']
@@ -38,59 +41,122 @@ def index(request):
             print(form.errors)
         print(settings.DATAVERSE_URL)
         sas_conn = saspy.SASsession(cfgname='ssh')
-        transfer_dataset_files_helper(dataset_doi, sas_conn) #TODO: error sometimes on server reload as its unset in a post
-        #Now upload the script
-        print(
-            sas_conn.upload(settings.MEDIA_ROOT+'/merge_scripts/'+form.cleaned_data['merge_script']
-            , settings.SAS_UPLOAD_FOLDER +"/"+form.cleaned_data['merge_script'], overwrite=False)) #Warning: setting overwrite to true can lead to timeouts?
+        transfer_dataset_files_helper(dataset_doi, sas_conn)
+        
+        folder_name = get_folder_name_from_doi_helper(dataset_doi)
+        upload_folder_to_sas_helper(folder_name, sas_conn) #MAD: REENABLE
 
-    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form})
+        #We are just going to store the merge scripts on the sas server for now
+        #NOTE That script selection is hardcoded currently
+
+        # print(
+        #     sas_conn.upload(settings.MEDIA_ROOT+'/merge_scripts/'+form.cleaned_data['merge_script']
+        #     , settings.SAS_UPLOAD_FOLDER +"/"+form.cleaned_data['merge_script'], overwrite=False)) #Warning: setting overwrite to true can lead to timeouts?
+
+        #Note: `options dlcreatedir` lets sas create the final folder in a library path if it doesn't exist. Only the final subfolder though, otherwise it fails
+        sas_run_string= "options dlcreatedir; " \
+                        "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"'; " \
+                        "libname e '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"'; " \
+                        "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
+                        "%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); " \
+                        "%match(15); " \
+                        "run;"
+        print(sas_run_string)
+        print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
+
+        #http://irss-dls-buildbox.irss.unc.edu:8888/output/doi1033563FK27RLCDC/
+        dlpath = settings.SAS_URL + ":8888/output/"+get_folder_name_from_doi_helper(dataset_doi)
+
+        sas_conn.endsas()
+    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath})
 
 #Downloads files from dataverse to webserver and then uploads them to saspy
 #TODO: Move this to a util folder
 def transfer_dataset_files_helper(doi, sas_conn):
     dataset_json = requests.get(settings.DATAVERSE_URL+'/api/datasets/:persistentId/?persistentId='+doi).json()
-    print(dataset_json)
+    #print(dataset_json)
 
-    folder_name_doi = ''.join(e for e in doi if e.isalnum()) #strips all special characters from doi. Good enough for prototype
-    directory = settings.MEDIA_ROOT+'/'+folder_name_doi
+    folder_name = get_folder_name_from_doi_helper(doi)
+    directory = settings.MEDIA_ROOT+'/data/'+folder_name
     # If folder exists don't attempt redownload. Good enough for prototype
     # Until Dataverse 5 comes out you can't even get info on original files
     # ... even when it comes out I don't think you can get the md5 on the original file
     if(not os.path.isdir(directory)): 
         for file_json in dataset_json["data"]["latestVersion"]["files"]:
             id = file_json["dataFile"]["id"]
-            download_file_local_helper(folder_name_doi, settings.DATAVERSE_URL+"/api/access/datafile/"+str(id)+"?format=original&gbrecs=true")
-    
-    upload_folder_to_sas_helper(folder_name_doi, sas_conn)
+            download_file_from_dataset_helper(folder_name, settings.DATAVERSE_URL+"/api/access/datafile/"+str(id)+"?gbrecs=true") #format=original&
 
-    #scp -i ~/.ssh/saspycampus -P 10808 -r /Users/madunlap/Documents/hsis_django_downloads/doi1033563FK2ABQF9V odum@irss-dls-buildbox.irss.unc.edu
-
-
-def download_file_local_helper(folder_name, url):
+def download_file_from_dataset_helper(folder_name, url):
+    print(url)
     with requests.get(url, stream=True) as r:
-        d = r.headers['content-disposition']
-        fname = re.findall("filename=(.+)", d)[0].strip('\"')
-        file_path = settings.MEDIA_ROOT+'/'+folder_name+'/'+fname
+        if(r.status_code == 200):
+            d = r.headers['content-disposition']
+            fname = re.findall("filename=(.+)", d)[0].strip('\"')
+            file_path = settings.MEDIA_ROOT+'/data/'+folder_name+'/'+fname
 
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'wb') as f:
-            shutil.copyfileobj(r.raw, f)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'wb') as f:
+                shutil.copyfileobj(r.raw, f)
+        else:
+            #This error case is to be expected for all non-tabular files, as we request original. We don't care about those anyways
+            print("ERROR DOWNLOADING FILES FROM DATASET. ERROR CODE:" + str(r.status_code))
+            pass
 
 #Note: This doesn't upload if the files already exist on the sas server
 #Also not recursive
 #TODO: Upload to a folder with the dataset name, saspy does not support folder creation it seems
 #TODO: Check success of upload, involves parsing json
 def upload_folder_to_sas_helper(folder_name, sas_conn):
-    print("HEY")
-    for entry in os.scandir(settings.MEDIA_ROOT+'/'+folder_name):
+    print("UPLOAD")
+    for entry in os.scandir(settings.MEDIA_ROOT+'/data/'+folder_name):
         if entry.is_file():
             print(entry.path)
             #print(sas_conn.saslog())
             print(sas_conn.upload(entry.path, settings.SAS_UPLOAD_FOLDER +"/"+entry.name, overwrite=False))
 
-def clear_all_downloads(request):
-    shutil.rmtree(settings.MEDIA_ROOT+'/')
-    #TODO: Also clear files from SAS server? Wait this is impossible using saspy...
+## This is broken, at least in OSX. blows up with a socket error
+#
+# def download_folder_from_sas_helper(folder_name, sas_conn):
+#     full_folder_path = settings.SAS_DOWNLOAD_FOLDER+ "/" + folder_name
+#     print("DOWNLOAD FOLDER " + full_folder_path)
+#     sas_output_list = sas_conn.dirlist(full_folder_path)
+#     print(sas_output_list)
+#     for entry in sas_output_list:
+#         print("downloading from " + full_folder_path + "/" + entry)
+#         print("downloading to " + settings.MEDIA_ROOT + "/testtemp/"+ entry)
+#         sas_conn.download(settings.MEDIA_ROOT + "/testtemp/"+ entry, full_folder_path + "/" + entry, True)
+#         print("downloaded")
 
-    return HttpResponse("Cleared "+settings.MEDIA_ROOT+'/')
+
+    #so... my assumption is that our sas code will output files to a subdirectory using the doi as the folder name
+
+    #First, get list of all files
+    # - Are we storing results by year? Or downloading from the same folder by year?
+    #Then download each file
+    #Finally, present output folder
+    
+def get_folder_name_from_doi_helper(doi):
+    return (''.join(e for e in doi if e.isalnum())) #strips all special characters from doi. Good enough for prototype    
+
+def clear_all_downloads(request):
+    if(os.path.isdir(settings.MEDIA_ROOT+"/data")):
+        shutil.rmtree(settings.MEDIA_ROOT+"/data")
+        return_string = "Deleted Django folder "+settings.MEDIA_ROOT+"/data"
+    else:
+        return_string = "Django folder "+settings.MEDIA_ROOT+"/data was already deleted, so nothing changed"
+
+    sas_conn = saspy.SASsession(cfgname='ssh')
+    # looks like you can just call *nix commands
+    sas_run_string = "x 'rm -r "+settings.SAS_UPLOAD_FOLDER+"/*';\n" \
+        "run;"
+    # sas_run_string= "data _null_;\n " \
+    #             "   filename deldir '"+settings.SAS_UPLOAD_FOLDER+"/test';\n " \
+    #             "   rc=fdelete('deldir');\n " \
+    #             "   put rc=;\n" \
+    #             "run;"
+    print(sas_run_string)
+    print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
+    sas_conn.endsas()
+    return_string += "<br><br> Cleared SAS folder " + settings.SAS_UPLOAD_FOLDER
+
+    return HttpResponse(return_string)

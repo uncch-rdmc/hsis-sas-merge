@@ -1,16 +1,17 @@
 from django import forms
 from django.conf import settings
 
-class AuthorInvitationForm(forms.Form):
+class HSISMergeForm(forms.Form):
 
     DATASET_CHOICES = [
         ('doi:10.33563/FK2/ABQF9V', 'NC 2006'),
+        ('doi:10.33563/FK2/7RLCDC', 'NC 2015'),
         ('doi:10.33563/FK2/4ZOPY4', 'WA 2017'),
         ('other', 'other')
     ]
 
     MERGE_SCRIPT_CHOICES = [
-        ('NC_merging_data_for_2017_modifiedByAS.sas', 'NC Merging Data'),
+        ('NC_merging_data_for_2017_modifiedByAS_forServer_nolibs.sas', 'NC Merging Data'),
         ('filename 2', 'Merge 1'),
     ]
 

@@ -75,10 +75,10 @@ SAS_config_options = {'lock_down': False,
 
 ssh      = {
             'ssh'     : '/usr/bin/ssh',
-            'host'    : 'FILLMEIN', 
+            'host'    : 'odum@irss-dls-buildbox.irss.unc.edu', 
             'port'    : 10808,
-            'tunnel'  : 9911,
-            'rtunnel' : 9912,
+            'tunnel'  : 9912,
+            'rtunnel' : 9911,
             'encoding': 'latin1',
             'saspath' : '/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_en',
             'options' : ["-fullstimer"]
