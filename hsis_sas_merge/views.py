@@ -32,6 +32,7 @@ import saspy
 def index(request):
     form = HSISMergeForm(request.POST or None)
     dlpath = ''
+    dlpathtext = ''
     if request.method == 'POST':
         if form.is_valid():
             dataset_doi = form.cleaned_data['dataset']
@@ -44,7 +45,7 @@ def index(request):
         transfer_dataset_files_helper(dataset_doi, sas_conn)
         
         folder_name = get_folder_name_from_doi_helper(dataset_doi)
-        upload_folder_to_sas_helper(folder_name, sas_conn) #MAD: REENABLE
+        upload_folder_to_sas_helper(folder_name, sas_conn)
 
         #We are just going to store the merge scripts on the sas server for now
         #NOTE That script selection is hardcoded currently
@@ -66,9 +67,9 @@ def index(request):
 
         #http://irss-dls-buildbox.irss.unc.edu:8888/output/doi1033563FK27RLCDC/
         dlpath = settings.SAS_URL + ":8888/output/"+get_folder_name_from_doi_helper(dataset_doi)
-
+        dlpathtext = "Merge Results"
         sas_conn.endsas()
-    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath})
+    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath, 'dlpathtext': dlpathtext})
 
 #Downloads files from dataverse to webserver and then uploads them to saspy
 #TODO: Move this to a util folder
