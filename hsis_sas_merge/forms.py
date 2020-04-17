@@ -3,10 +3,12 @@ from django.conf import settings
 
 class HSISMergeForm(forms.Form):
 
+    #TODO: Do something better instead of overloading this string
     DATASET_CHOICES = [
-        ('doi:10.33563/FK2/ABQF9V', 'NC 2006'),
-        ('doi:10.33563/FK2/7RLCDC', 'NC 2015'),
-        ('doi:10.33563/FK2/4ZOPY4', 'WA 2017'),
+        ('NC|06|doi:10.33563/FK2/ABQF9V', 'NC 2006'),
+        ('NC|14|doi:10.33563/FK2/GAHC3D', 'NC 2014'),
+        ('NC|15|doi:10.33563/FK2/7RLCDC', 'NC 2015'),
+        ('WA|17|doi:10.33563/FK2/4ZOPY4', 'WA 2017'),
         ('other', 'other')
     ]
 

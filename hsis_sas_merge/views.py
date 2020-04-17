@@ -35,11 +35,19 @@ def index(request):
     dlpathtext = ''
     if request.method == 'POST':
         if form.is_valid():
-            dataset_doi = form.cleaned_data['dataset']
-            if(dataset_doi == "other"):
-                dataset_doi = form.cleaned_data['other_dataset']
+            dataset_selection = form.cleaned_data['dataset']
+            if(dataset_selection == "other"):
+                #TODO: Right now "other" will blow things up
+                dataset_selection = form.cleaned_data['other_dataset']
+            else:
+                dataset_selection_split_list = dataset_selection.split("|")
+                print(dataset_selection_split_list)
+                dataset_state = dataset_selection_split_list[0]
+                dataset_year = int(dataset_selection_split_list[1])
+                dataset_doi = dataset_selection_split_list[2]
         else:
             print(form.errors)
+
         print(settings.DATAVERSE_URL)
         sas_conn = saspy.SASsession(cfgname='ssh')
         transfer_dataset_files_helper(dataset_doi, sas_conn)
@@ -47,21 +55,27 @@ def index(request):
         folder_name = get_folder_name_from_doi_helper(dataset_doi)
         upload_folder_to_sas_helper(folder_name, sas_conn)
 
-        #We are just going to store the merge scripts on the sas server for now
-        #NOTE That script selection is hardcoded currently
+        print(str(form.cleaned_data))
 
+        #We are just going to store the merge scripts on the sas server for now
         # print(
         #     sas_conn.upload(settings.MEDIA_ROOT+'/merge_scripts/'+form.cleaned_data['merge_script']
         #     , settings.SAS_UPLOAD_FOLDER +"/"+form.cleaned_data['merge_script'], overwrite=False)) #Warning: setting overwrite to true can lead to timeouts?
 
         #Note: `options dlcreatedir` lets sas create the final folder in a library path if it doesn't exist. Only the final subfolder though, otherwise it fails
+        #Note2: the merge scripts live above (..) the input folder
         sas_run_string= "options dlcreatedir; " \
-                        "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"'; " \
+                        "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
                         "libname e '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"'; " \
                         "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
-                        "%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); " \
-                        "%match(15); " \
+                        "%include scrptfld(NC_merging_data_for_2017_django_modular.sas); "    
+                        #"%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); "
+        
+        if(dataset_year > 9 and dataset_year < 30): #sloppy date handling to deal with 2 digit years
+            sas_run_string += "%match3("+str(dataset_year)+"); " \
                         "run;"
+        
+
         print(sas_run_string)
         print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
 
@@ -85,12 +99,13 @@ def transfer_dataset_files_helper(doi, sas_conn):
     if(not os.path.isdir(directory)): 
         for file_json in dataset_json["data"]["latestVersion"]["files"]:
             id = file_json["dataFile"]["id"]
-            download_file_from_dataset_helper(folder_name, settings.DATAVERSE_URL+"/api/access/datafile/"+str(id)+"?gbrecs=true") #format=original&
+            download_file_from_dataset_helper(folder_name, settings.DATAVERSE_URL+"/api/access/datafile/"+str(id)) #?gbrecs=true&format=original
 
 def download_file_from_dataset_helper(folder_name, url):
-    print(url)
-    with requests.get(url, stream=True) as r:
+    #print(url)
+    with requests.get(url+"?format=original", stream=True) as r:
         if(r.status_code == 200):
+            print(url+"?format=original")
             d = r.headers['content-disposition']
             fname = re.findall("filename=(.+)", d)[0].strip('\"')
             file_path = settings.MEDIA_ROOT+'/data/'+folder_name+'/'+fname
@@ -99,9 +114,23 @@ def download_file_from_dataset_helper(folder_name, url):
             with open(file_path, 'wb') as f:
                 shutil.copyfileobj(r.raw, f)
         else:
-            #This error case is to be expected for all non-tabular files, as we request original. We don't care about those anyways
-            print("ERROR DOWNLOADING FILES FROM DATASET. ERROR CODE:" + str(r.status_code))
-            pass
+            print(url)
+            #Try without "original format" request
+            with requests.get(url, stream=True) as r:
+                if(r.status_code == 200):
+                    #print("success non original format")
+                    d = r.headers['content-disposition']
+                    fname = re.findall("filename=(.+)", d)[0].strip('\"')
+                    file_path = settings.MEDIA_ROOT+'/data/'+folder_name+'/'+fname
+
+                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                    with open(file_path, 'wb') as f:
+                        shutil.copyfileobj(r.raw, f)
+                else:
+                    print("ERROR DOWNLOADING FILES FROM DATASET. ERROR CODE:" + str(r.status_code))
+                    pass #TODO: also print error message from server
+
+
 
 #Note: This doesn't upload if the files already exist on the sas server
 #Also not recursive
