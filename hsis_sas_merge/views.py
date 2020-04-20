@@ -71,7 +71,25 @@ def index(request):
                         "%include scrptfld(NC_merging_data_for_2017_django_modular.sas); "    
                         #"%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); "
         
-        if(dataset_year > 9 and dataset_year < 30): #sloppy date handling to deal with 2 digit years
+        #sloppy date handling to deal with 2 digit years
+        if(dataset_year <= 7 or dataset_year > 50): #untested
+            # 2007 and earlier: Match 1
+            print("Match1")
+            sas_run_string += "%match1(0"+str(dataset_year)+"); " \
+                        "run;"
+        elif(dataset_year == 8): #untested
+            # 2008: Match 2
+            print("Match2")
+            sas_run_string += "%match2(0"+str(dataset_year)+"); " \
+                        "run;"
+        elif(dataset_year == 9):
+            # 2009 and later: Match 3 (need added 0 to run string)
+            print("Match3")
+            sas_run_string += "%match3(0"+str(dataset_year)+"); " \
+                        "run;"
+        elif(dataset_year > 9 and dataset_year < 30):
+            # 2009 and later: Match 3
+            print("Match3")
             sas_run_string += "%match3("+str(dataset_year)+"); " \
                         "run;"
         
@@ -83,6 +101,9 @@ def index(request):
         dlpath = settings.SAS_URL + ":8888/output/"+get_folder_name_from_doi_helper(dataset_doi)
         dlpathtext = "Merge Results"
         sas_conn.endsas()
+
+        #TODO: redirect to a different page so that the form can't resubmit on refresh
+
     return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath, 'dlpathtext': dlpathtext})
 
 #Downloads files from dataverse to webserver and then uploads them to saspy

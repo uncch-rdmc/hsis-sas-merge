@@ -5,16 +5,15 @@ class HSISMergeForm(forms.Form):
 
     #TODO: Do something better instead of overloading this string
     DATASET_CHOICES = [
-        ('NC|06|doi:10.33563/FK2/ABQF9V', 'NC 2006'),
-        ('NC|14|doi:10.33563/FK2/GAHC3D', 'NC 2014'),
+        #('NC|07|doi:10.33563/FK2/WAXZEH', 'NC 2007'), #Match 1&2 unsupported currently
+        ('NC|13|doi:10.33563/FK2/V1JFNA', 'NC 2013'),
         ('NC|15|doi:10.33563/FK2/7RLCDC', 'NC 2015'),
-        ('WA|17|doi:10.33563/FK2/4ZOPY4', 'WA 2017'),
-        ('other', 'other')
+        #('other', 'other') #unsupported currently
     ]
 
     MERGE_SCRIPT_CHOICES = [
         ('NC_merging_data_for_2017_modifiedByAS_forServer_nolibs.sas', 'NC Merging Data'),
-        ('filename 2', 'Merge 1'),
+        #('filename 2', 'Merge 1'),
     ]
 
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
