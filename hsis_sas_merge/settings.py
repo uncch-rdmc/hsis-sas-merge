@@ -140,7 +140,7 @@ MEDIA_ROOT = '/Users/madunlap/Documents/hsis_django_downloads'
 
 #HSIS APP SPECIFIC
 DATAVERSE_URL = 'https://highwaysafetytest.irss.unc.edu'
-SAS_UPLOAD_FOLDER = '/sasdata/input'
-SAS_DOWNLOAD_FOLDER = '/sasdata/output'
+SAS_UPLOAD_FOLDER = '/sasdata/input' #on sas server
+SAS_DOWNLOAD_FOLDER = '/sasdata/output' #on sas server
 SAS_URL = 'http://irss-dls-buildbox.irss.unc.edu' #note, only used for dl path generation, also needs to be set in sascfg_personal.py
 #DATAVERSE_API_TOKEN = ''
