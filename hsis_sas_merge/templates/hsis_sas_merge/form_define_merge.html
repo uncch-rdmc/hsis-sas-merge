@@ -38,5 +38,10 @@
       document.getElementById("loading").style.display = 'block';
   }
 </script>
+<script>
+    if ( window.history.replaceState ) {
+        window.history.replaceState( null, null, window.location.href );
+    }
+</script>
 
 {% comment %} {% endblock content %} {% endcomment %}

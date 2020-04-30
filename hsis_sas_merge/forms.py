@@ -6,6 +6,7 @@ class HSISMergeForm(forms.Form):
     #TODO: Do something better instead of overloading this string
     DATASET_CHOICES = [
         #('NC|07|doi:10.33563/FK2/WAXZEH', 'NC 2007'), #Match 1&2 unsupported currently
+        ('NC|11|doi:10.33563/FK2/ERXBTI', 'NC 2011'),
         ('NC|13|doi:10.33563/FK2/V1JFNA', 'NC 2013'),
         ('NC|15|doi:10.33563/FK2/7RLCDC', 'NC 2015'),
         #('other', 'other') #unsupported currently
