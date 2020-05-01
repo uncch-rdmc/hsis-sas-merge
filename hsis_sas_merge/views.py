@@ -36,7 +36,16 @@ def index(request):
         print("GET")
         if(request.GET.get('datasetPid')):
             print(request.GET.get('datasetPid'))
-            form = HSISMergeForm(initial={'other_dataset': request.GET.get('datasetPid'),'dataset':'other'})
+            found = False
+            for tup in HSISMergeForm.DATASET_CHOICES:
+                print(tup)
+                if(request.GET.get('datasetPid') in tup[0]):
+                    found = True
+                    form = HSISMergeForm(initial={'dataset':tup[0]})
+                    break
+
+            if(not found):
+                form = HSISMergeForm(initial={'dataset':'other','other_dataset': request.GET.get('datasetPid')})
         else:
             form = HSISMergeForm()
         
