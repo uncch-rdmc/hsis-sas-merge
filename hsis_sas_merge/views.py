@@ -29,16 +29,26 @@ import saspy
 
 # ... Eh the ajax seems overkill. Just use a loading image like this: 
 # https://stackoverflow.com/questions/1853662/how-to-show-page-loading-div-until-the-page-has-finished-loading
-def index(request):
-    form = HSISMergeForm(request.POST or None)
+def index(request):   
     dlpath = ''
-    dlpathtext = ''
-    if request.method == 'POST':
+    dlpathtext = '' 
+    if request.method == 'GET':
+        print("GET")
+        if(request.GET.get('datasetPid')):
+            print(request.GET.get('datasetPid'))
+            form = HSISMergeForm(initial={'other_dataset': request.GET.get('datasetPid'),'dataset':'other'})
+        else:
+            form = HSISMergeForm()
+        
+    elif request.method == 'POST':
+        form = HSISMergeForm(request.POST or None)
         if form.is_valid():
             dataset_selection = form.cleaned_data['dataset']
             if(dataset_selection == "other"):
                 #TODO: Right now "other" will blow things up
-                dataset_selection = form.cleaned_data['other_dataset']
+                dataset_state = form.cleaned_data['other_state']
+                dataset_year = form.cleaned_data['other_year']
+                dataset_doi = form.cleaned_data['other_dataset']
             else:
                 dataset_selection_split_list = dataset_selection.split("|")
                 print(dataset_selection_split_list)
@@ -53,8 +63,11 @@ def index(request):
         transfer_dataset_files_helper(dataset_doi, sas_conn)
         
         folder_name = get_folder_name_from_doi_helper(dataset_doi)
-        upload_folder_to_sas_helper(folder_name, sas_conn)
+        sas_conn.endsas() #trying closing and opening the connector because of weird behaviour
 
+        upload_folder_to_sas_helper(folder_name)
+
+        sas_conn = saspy.SASsession(cfgname='ssh')
         print(str(form.cleaned_data))
 
         #We are just going to store the merge scripts on the sas server for now
@@ -161,13 +174,16 @@ def download_file_from_dataset_helper(folder_name, url):
 #Also not recursive
 #TODO: Upload to a folder with the dataset name, saspy does not support folder creation it seems
 #TODO: Check success of upload, involves parsing json
-def upload_folder_to_sas_helper(folder_name, sas_conn):
+def upload_folder_to_sas_helper(folder_name):
     print("UPLOAD")
+    
     for entry in os.scandir(settings.MEDIA_ROOT+'/data/'+folder_name):
         if entry.is_file():
+            sas_conn = saspy.SASsession(cfgname='ssh')
             print(entry.path)
             #print(sas_conn.saslog())
-            print(sas_conn.upload(entry.path, settings.SAS_UPLOAD_FOLDER +"/"+entry.name, overwrite=False))
+            print(sas_conn.upload(entry.path, settings.SAS_UPLOAD_FOLDER +"/"+entry.name, overwrite=True))
+            sas_conn.endsas()
 
 ## This is broken, at least in OSX. blows up with a socket error
 #

@@ -9,12 +9,40 @@ class HSISMergeForm(forms.Form):
         ('NC|11|doi:10.33563/FK2/ERXBTI', 'NC 2011'),
         ('NC|13|doi:10.33563/FK2/V1JFNA', 'NC 2013'),
         ('NC|15|doi:10.33563/FK2/7RLCDC', 'NC 2015'),
-        ('WA|11|doi:10.33563/FK2/7INTCZ', 'WA 2011')
-        #('other', 'other') #unsupported currently
+        ('WA|11|doi:10.33563/FK2/7INTCZ', 'WA 2011'),
+        ('WA|12|doi:10.33563/FK2/AGMDIG', 'WA 2012'),
+        ('other', 'other') #unsupported currently
+    ]
+
+    YEAR_CHOICES = [
+        ('--', '----'),
+        ('02', '2002'),
+        ('03', '2003'),
+        ('04', '2004'),
+        ('05', '2005'),
+        ('06', '2006'),
+        ('07', '2007'),
+        ('08', '2008'),
+        ('09', '2009'),
+        ('10', '2010'),
+        ('11', '2011'),
+        ('12', '2012'),
+        ('13', '2013'),
+        ('14', '2014'),
+        ('15', '2015'),
+        ('16', '2016'),
+        ('17', '2017'),
+        ('18', '2018'),
+        ('19', '2019'),
+        ('20', '2020')
+    ]
+    STATE_CHOICES = [
+        ('--','--'),
+        ('NC','NC'),
+        ('WA','WA')
     ]
 
     MERGE_SCRIPT_CHOICES = [
-#MAD: I'm not sure the script file name here is even being used?
         ('NC_merging_data_for_2017_django_modular.sas', 'NC Merging Data'),
         ('WA ACRD 2010-2011.sas', 'WA Behavior 2-Lane Crashes'),
         #('filename 2', 'Merge 1'),
@@ -24,4 +52,6 @@ class HSISMergeForm(forms.Form):
     #email = forms.CharField(label='Invitee email', max_length=5, required=False)
     merge_script = forms.ChoiceField(choices=MERGE_SCRIPT_CHOICES)
     dataset = forms.ChoiceField(choices=DATASET_CHOICES)
-    other_dataset = forms.CharField(required=False, label='Other Dataset DOI')
+    other_dataset = forms.CharField(required=False, label='Dataset DOI')
+    other_state = forms.ChoiceField(choices=STATE_CHOICES)
+    other_year = forms.ChoiceField(choices=YEAR_CHOICES)

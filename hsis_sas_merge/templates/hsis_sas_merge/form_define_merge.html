@@ -20,10 +20,14 @@
         console.log(document.getElementById('id_other_dataset').parentElement.parentElement);
         if(document.getElementById('id_dataset').value == 'other' ) {
             document.getElementById('id_other_dataset').parentElement.parentElement.style = "";
+            document.getElementById('id_other_state').parentElement.parentElement.style = "";
+            document.getElementById('id_other_year').parentElement.parentElement.style = "";
             console.log('yea')
         }
         else {
             document.getElementById('id_other_dataset').parentElement.parentElement.style = "display:none;";
+            document.getElementById('id_other_state').parentElement.parentElement.style = "display:none;";
+            document.getElementById('id_other_year').parentElement.parentElement.style = "display:none;";
             console.log('hidden')
         }
         //we hide the form on page load to not flicker
