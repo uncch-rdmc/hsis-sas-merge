@@ -228,6 +228,7 @@ def clear_all_downloads(request):
     sas_conn = saspy.SASsession(cfgname='ssh')
     # looks like you can just call *nix commands
     sas_run_string = "x 'rm -r "+settings.SAS_UPLOAD_FOLDER+"/*';\n" \
+        "x 'rm -r "+settings.SAS_DOWNLOAD_FOLDER+"/*';\n" \
         "run;"
     # sas_run_string= "data _null_;\n " \
     #             "   filename deldir '"+settings.SAS_UPLOAD_FOLDER+"/test';\n " \
@@ -238,6 +239,7 @@ def clear_all_downloads(request):
     print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
     sas_conn.endsas()
     return_string += "<br><br> Cleared SAS folder " + settings.SAS_UPLOAD_FOLDER
+    return_string += "<br> Cleared SAS folder " + settings.SAS_DOWNLOAD_FOLDER
 
     #TODO: also clear SAS output directory
 
