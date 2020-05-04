@@ -72,12 +72,12 @@ def index(request):
         transfer_dataset_files_helper(dataset_doi, sas_conn)
         
 #MAD: UPDATE NEXT, WOULD BE GOOD TO HAVE /DOI/SCRIPT/ structure    
-        folder_name = get_folder_name_from_doi_helper(dataset_doi)
-        sas_conn.endsas() #trying closing and opening the connector because of weird behaviour
+        doi_folder_name = get_folder_name_from_doi_helper(dataset_doi)
+        #sas_conn.endsas() #trying closing and opening the connector because of weird behaviour
 
-        upload_folder_to_sas_helper(folder_name)
+        upload_folder_to_sas_helper(doi_folder_name, sas_conn)
 
-        sas_conn = saspy.SASsession(cfgname='ssh')
+        #sas_conn = saspy.SASsession(cfgname='ssh')
         print(str(form.cleaned_data))
 
         #We are just going to store the merge scripts on the sas server for now
@@ -85,15 +85,21 @@ def index(request):
         #     sas_conn.upload(settings.MEDIA_ROOT+'/merge_scripts/'+form.cleaned_data['merge_script']
         #     , settings.SAS_UPLOAD_FOLDER +"/"+form.cleaned_data['merge_script'], overwrite=False)) #Warning: setting overwrite to true can lead to timeouts?
 
-        if(form.cleaned_data['merge_script'].startswith('NC')):
+        merge_script = form.cleaned_data['merge_script']
+        merge_script_folder_label = dict(form.fields['merge_script'].choices)[merge_script].replace(" ", "_")
+        #print(merge_script_label)
+
+        if(merge_script.startswith('NC')):
 
             #Note: `options dlcreatedir` lets sas create the final folder in a library path if it doesn't exist. Only the final subfolder though, otherwise it fails
             #Note2: the merge scripts live above (..) the input folder
+            #Note3: doi folder is only used to create "root" directory, dlcreatedir doesn't support creation of nesting directly
             sas_run_string= "options dlcreatedir; " \
                             "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
-                            "libname e '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"'; " \
+                            "libname doi '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"'; " \
+                            "libname e '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"'; " \
                             "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
-                            "%include scrptfld("+form.cleaned_data['merge_script']+"); "    
+                            "%include scrptfld("+merge_script+"); "    
                             #"%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); "
             
             #sloppy date handling to deal with 2 digit years
@@ -121,13 +127,17 @@ def index(request):
 # libname f '/folders/myfolders/newer merge stuff/fakebase';
 # libname f1 '/folders/myfolders/newer merge stuff/fakebase2';
 # libname data '/folders/myfolders/newer merge stuff/wadata11-12';
-        elif(form.cleaned_data['merge_script'].startswith('WA')):
+
+#NOTE: doi folder is only used to create "root" directory, dlcreatedir doesn't support creation of nesting directly
+#NOTE: libname f was used to store an intermediate file, but we only care about the final and the script seems fine with overriding its own file
+        elif(merge_script.startswith('WA')):
             sas_run_string = "options dlcreatedir; " \
                             "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
-                            "libname f '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"_intermediate'; " \
-                            "libname f1 '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"'; " \
+                            "libname doi '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"'; " \
+                            "libname f '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"'; " \
+                            "libname f1 '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"'; " \
                             "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
-                            "%include scrptfld("+form.cleaned_data['merge_script']+"); "  
+                            "%include scrptfld("+merge_script+"); "  
 
             sas_run_string += "%curvacc("+str(dataset_year).zfill(2)+"); " \
                             "run;"
@@ -136,7 +146,7 @@ def index(request):
         print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
 
         #http://irss-dls-buildbox.irss.unc.edu:8888/output/doi1033563FK27RLCDC/
-        dlpath = settings.SAS_URL + ":8888/output/"+get_folder_name_from_doi_helper(dataset_doi)
+        dlpath = settings.SAS_URL + ":8888/output/"+doi_folder_name+"/"+merge_script_folder_label
         dlpathtext = "Merge Results"
         sas_conn.endsas()
 
@@ -195,16 +205,16 @@ def download_file_from_dataset_helper(folder_name, url):
 #Also not recursive
 #TODO: Upload to a folder with the dataset name, saspy does not support folder creation it seems
 #TODO: Check success of upload, involves parsing json
-def upload_folder_to_sas_helper(folder_name):
+def upload_folder_to_sas_helper(folder_name, sas_conn):
     print("UPLOAD")
     
     for entry in os.scandir(settings.MEDIA_ROOT+'/data/'+folder_name):
         if entry.is_file():
-            sas_conn = saspy.SASsession(cfgname='ssh')
+            #sas_conn = saspy.SASsession(cfgname='ssh')
             print(entry.path)
             #print(sas_conn.saslog())
             print(sas_conn.upload(entry.path, settings.SAS_UPLOAD_FOLDER +"/"+entry.name, overwrite=False))
-            sas_conn.endsas()
+            #sas_conn.endsas()
 
 ## This is broken, at least in OSX. blows up with a socket error
 #
