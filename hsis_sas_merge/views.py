@@ -71,6 +71,7 @@ def index(request):
         sas_conn = saspy.SASsession(cfgname='ssh')
         transfer_dataset_files_helper(dataset_doi, sas_conn)
         
+#MAD: UPDATE NEXT, WOULD BE GOOD TO HAVE /DOI/SCRIPT/ structure    
         folder_name = get_folder_name_from_doi_helper(dataset_doi)
         sas_conn.endsas() #trying closing and opening the connector because of weird behaviour
 
@@ -116,9 +117,20 @@ def index(request):
                 print("Match3")
                 sas_run_string += "%match3("+str(dataset_year)+"); " \
                             "run;"
-        
+
+# libname f '/folders/myfolders/newer merge stuff/fakebase';
+# libname f1 '/folders/myfolders/newer merge stuff/fakebase2';
+# libname data '/folders/myfolders/newer merge stuff/wadata11-12';
         elif(form.cleaned_data['merge_script'].startswith('WA')):
-            pass
+            sas_run_string = "options dlcreatedir; " \
+                            "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
+                            "libname f '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"_intermediate'; " \
+                            "libname f1 '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"'; " \
+                            "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
+                            "%include scrptfld("+form.cleaned_data['merge_script']+"); "  
+
+            sas_run_string += "%curvacc("+str(dataset_year).zfill(2)+"); " \
+                            "run;"
 
         print(sas_run_string)
         print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
@@ -191,7 +203,7 @@ def upload_folder_to_sas_helper(folder_name):
             sas_conn = saspy.SASsession(cfgname='ssh')
             print(entry.path)
             #print(sas_conn.saslog())
-            print(sas_conn.upload(entry.path, settings.SAS_UPLOAD_FOLDER +"/"+entry.name, overwrite=True))
+            print(sas_conn.upload(entry.path, settings.SAS_UPLOAD_FOLDER +"/"+entry.name, overwrite=False))
             sas_conn.endsas()
 
 ## This is broken, at least in OSX. blows up with a socket error
