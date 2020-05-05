@@ -273,7 +273,7 @@ def clear_all_downloads(request):
 
     return HttpResponse(return_string)
 
-def trigger_dataset_creation_from_sas_results(request):
+def trigger_result_upload_to_dataset_from_sas(request):
     print(request.GET.get('datasetPid'))
     print(request.GET.get('mergeScript'))
 
@@ -286,6 +286,8 @@ def trigger_dataset_creation_from_sas_results(request):
     print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
     sas_conn.endsas()
 
-    return_string = "Triggered creation"
+    #return_string = "Triggered creation"
 
-    return HttpResponse(return_string)
+    return redirect("https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId="+request.GET.get('datasetPid')+"&version=DRAFT")
+    #https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId=doi:10.33563/FK2/7INTCZ&version=DRAFT
+    #return HttpResponse(return_string)
