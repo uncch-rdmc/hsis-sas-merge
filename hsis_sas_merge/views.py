@@ -30,8 +30,12 @@ import saspy
 # ... Eh the ajax seems overkill. Just use a loading image like this: 
 # https://stackoverflow.com/questions/1853662/how-to-show-page-loading-div-until-the-page-has-finished-loading
 def index(request):   
+    #variables that populate links which show up after a merge
     dlpath = ''
     dlpathtext = '' 
+    dvuppath = ''
+    dvuppathtext = ''
+
     if request.method == 'GET':
         print("GET")
         if(request.GET.get('datasetPid')):
@@ -70,8 +74,7 @@ def index(request):
         print(settings.DATAVERSE_URL)
         sas_conn = saspy.SASsession(cfgname='ssh')
         transfer_dataset_files_helper(dataset_doi, sas_conn)
-        
-#MAD: UPDATE NEXT, WOULD BE GOOD TO HAVE /DOI/SCRIPT/ structure    
+          
         doi_folder_name = get_folder_name_from_doi_helper(dataset_doi)
         #sas_conn.endsas() #trying closing and opening the connector because of weird behaviour
 
@@ -148,11 +151,14 @@ def index(request):
         #http://irss-dls-buildbox.irss.unc.edu:8888/output/doi1033563FK27RLCDC/
         dlpath = settings.SAS_URL + ":8888/output/"+doi_folder_name+"/"+merge_script_folder_label
         dlpathtext = "Merge Results"
+        #http://localhost:8000/createdataset?datasetPid=doi:10.33563/FK2/7INTCZ&mergeScript=WA_2-Lane_Curve_Crashes
+        dvuppath = "createdataset?datasetPid="+dataset_doi+"&mergeScript="+merge_script_folder_label
+        dvuppathtext = "Upload Results to Dataverse"
         sas_conn.endsas()
 
         #TODO: redirect to a different page so that the form can't resubmit on refresh
 
-    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath, 'dlpathtext': dlpathtext})
+    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath, 'dlpathtext': dlpathtext, 'dvuppath': dvuppath, 'dvuppathtext': dvuppathtext})
 
 #Downloads files from dataverse to webserver and then uploads them to saspy
 #TODO: Move this to a util folder
@@ -264,5 +270,22 @@ def clear_all_downloads(request):
     return_string += "<br> Cleared SAS folder " + settings.SAS_DOWNLOAD_FOLDER
 
     #TODO: also clear SAS output directory
+
+    return HttpResponse(return_string)
+
+def trigger_dataset_creation_from_sas_results(request):
+    print(request.GET.get('datasetPid'))
+    print(request.GET.get('mergeScript'))
+
+    sas_conn = saspy.SASsession(cfgname='ssh')
+    # looks like you can just call *nix commands
+    #NOTE: This is unsanitized
+    sas_run_string = "x 'bash /sasdata/dataset_upload.bash "+request.GET.get('datasetPid')+ " \"" +request.GET.get('mergeScript')+"\"' \n"\
+                            "run;"
+    print(sas_run_string)
+    print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
+    sas_conn.endsas()
+
+    return_string = "Triggered creation"
 
     return HttpResponse(return_string)
