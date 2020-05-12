@@ -9,8 +9,8 @@ class HSISMergeForm(forms.Form):
         ('NC|11|doi:10.33563/FK2/ERXBTI', 'NC 2011'),
         ('NC|13|doi:10.33563/FK2/V1JFNA', 'NC 2013'),
         ('NC|15|doi:10.33563/FK2/7RLCDC', 'NC 2015'),
-        ('WA|11|doi:10.33563/FK2/7INTCZ', 'WA 2011'),
-        ('WA|12|doi:10.33563/FK2/AGMDIG', 'WA 2012'),
+        ('WA|11|doi:10.33563/FK2/FLFRU9', 'WA 2011'),
+        ('WA|12|doi:10.33563/FK2/A58P7I', 'WA 2012'),
         ('other', 'other') #unsupported currently
     ]
 
