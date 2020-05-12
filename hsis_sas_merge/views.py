@@ -121,11 +121,27 @@ def index(request):
                 print("Match3")
                 sas_run_string += "%match3(0"+str(dataset_year)+"); " \
                             "run;"
-            elif(dataset_year > 9 and dataset_year < 30):
-                # 2009 and later: Match 3
+            elif(dataset_year >= 10 and dataset_year < 30):
+                # 2010 and later: Match 3
                 print("Match3")
                 sas_run_string += "%match3("+str(dataset_year)+"); " \
                             "run;"
+
+            #TODO: Here, detect if this is the "alt" script listing and add additional to the run string:
+            print("OMG LABEL")
+            print(merge_script_folder_label)
+            if(merge_script_folder_label.endswith('regression')):
+                sas_run_string += """
+data input out e.nc{dataset_year}acrd;
+set e.nc{dataset_year}acrd;
+if severity le 5;
+run;
+
+proc logistic data = e.nc{dataset_year}acrd;
+class rodwycls rururb acctype ; 
+model severity = rodwycls rururb acctype numvehs;
+run;
+            """.format(dataset_year=dataset_year)
 
 # libname f '/folders/myfolders/newer merge stuff/fakebase';
 # libname f1 '/folders/myfolders/newer merge stuff/fakebase2';
@@ -144,6 +160,9 @@ def index(request):
 
             sas_run_string += "%curvacc("+str(dataset_year).zfill(2)+"); " \
                             "run;"
+
+
+
 
         print(sas_run_string)
         print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))

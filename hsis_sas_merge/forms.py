@@ -44,6 +44,7 @@ class HSISMergeForm(forms.Form):
 
     MERGE_SCRIPT_CHOICES = [
         ('NC_merging_data_for_2017_django_modular.sas', 'NC Merging Data'),
+        ('NC_HSISDataverse_SAS_ordered-logistic-NC-madified-further.sas', 'NC Merging Data with regression'),
         ('WA_ACCURV_modular.sas', 'WA 2-Lane Curve Crashes'),
         #('filename 2', 'Merge 1'),
     ]
