@@ -307,6 +307,9 @@ def trigger_result_upload_to_dataset_from_sas(request):
 
     #return_string = "Triggered creation"
 
-    return redirect("https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId="+request.GET.get('datasetPid')+"&version=DRAFT")
+    #hardcoded pid for demo
+    return redirect("https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId=doi:10.33563/FK2/HZCZMK&version=DRAFT")
+    #return redirect("https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId="+request.GET.get('datasetPid')+"&version=DRAFT")
+
     #https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId=doi:10.33563/FK2/7INTCZ&version=DRAFT
     #return HttpResponse(return_string)
