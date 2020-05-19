@@ -29,16 +29,39 @@ import saspy
 
 # ... Eh the ajax seems overkill. Just use a loading image like this: 
 # https://stackoverflow.com/questions/1853662/how-to-show-page-loading-div-until-the-page-has-finished-loading
-def index(request):
-    form = HSISMergeForm(request.POST or None)
+def index(request):   
+    #variables that populate links which show up after a merge
     dlpath = ''
-    dlpathtext = ''
-    if request.method == 'POST':
+    dlpathtext = '' 
+    dvuppath = ''
+    dvuppathtext = ''
+
+    if request.method == 'GET':
+        print("GET")
+        if(request.GET.get('datasetPid')):
+            print(request.GET.get('datasetPid'))
+            found = False
+            for tup in HSISMergeForm.DATASET_CHOICES:
+                print(tup)
+                if(request.GET.get('datasetPid') in tup[0]):
+                    found = True
+                    form = HSISMergeForm(initial={'dataset':tup[0]})
+                    break
+
+            if(not found):
+                form = HSISMergeForm(initial={'dataset':'other','other_dataset': request.GET.get('datasetPid')})
+        else:
+            form = HSISMergeForm()
+        
+    elif request.method == 'POST':
+        form = HSISMergeForm(request.POST or None)
         if form.is_valid():
             dataset_selection = form.cleaned_data['dataset']
             if(dataset_selection == "other"):
                 #TODO: Right now "other" will blow things up
-                dataset_selection = form.cleaned_data['other_dataset']
+                dataset_state = form.cleaned_data['other_state']
+                dataset_year = form.cleaned_data['other_year']
+                dataset_doi = form.cleaned_data['other_dataset']
             else:
                 dataset_selection_split_list = dataset_selection.split("|")
                 print(dataset_selection_split_list)
@@ -51,10 +74,13 @@ def index(request):
         print(settings.DATAVERSE_URL)
         sas_conn = saspy.SASsession(cfgname='ssh')
         transfer_dataset_files_helper(dataset_doi, sas_conn)
-        
-        folder_name = get_folder_name_from_doi_helper(dataset_doi)
-        upload_folder_to_sas_helper(folder_name, sas_conn)
+          
+        doi_folder_name = get_folder_name_from_doi_helper(dataset_doi)
+        #sas_conn.endsas() #trying closing and opening the connector because of weird behaviour
 
+        upload_folder_to_sas_helper(doi_folder_name, sas_conn)
+
+        #sas_conn = saspy.SASsession(cfgname='ssh')
         print(str(form.cleaned_data))
 
         #We are just going to store the merge scripts on the sas server for now
@@ -62,49 +88,96 @@ def index(request):
         #     sas_conn.upload(settings.MEDIA_ROOT+'/merge_scripts/'+form.cleaned_data['merge_script']
         #     , settings.SAS_UPLOAD_FOLDER +"/"+form.cleaned_data['merge_script'], overwrite=False)) #Warning: setting overwrite to true can lead to timeouts?
 
-        #Note: `options dlcreatedir` lets sas create the final folder in a library path if it doesn't exist. Only the final subfolder though, otherwise it fails
-        #Note2: the merge scripts live above (..) the input folder
-        sas_run_string= "options dlcreatedir; " \
-                        "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
-                        "libname e '" + settings.SAS_DOWNLOAD_FOLDER + "/" + folder_name +"'; " \
-                        "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
-                        "%include scrptfld(NC_merging_data_for_2017_django_modular.sas); "    
-                        #"%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); "
-        
-        #sloppy date handling to deal with 2 digit years
-        if(dataset_year <= 7 or dataset_year > 50): #untested
-            # 2007 and earlier: Match 1
-            print("Match1")
-            sas_run_string += "%match1(0"+str(dataset_year)+"); " \
-                        "run;"
-        elif(dataset_year == 8): #untested
-            # 2008: Match 2
-            print("Match2")
-            sas_run_string += "%match2(0"+str(dataset_year)+"); " \
-                        "run;"
-        elif(dataset_year == 9):
-            # 2009 and later: Match 3 (need added 0 to run string)
-            print("Match3")
-            sas_run_string += "%match3(0"+str(dataset_year)+"); " \
-                        "run;"
-        elif(dataset_year > 9 and dataset_year < 30):
-            # 2009 and later: Match 3
-            print("Match3")
-            sas_run_string += "%match3("+str(dataset_year)+"); " \
-                        "run;"
-        
+        merge_script = form.cleaned_data['merge_script']
+        merge_script_folder_label = dict(form.fields['merge_script'].choices)[merge_script].replace(" ", "_")
+        #print(merge_script_label)
+
+        if(merge_script.startswith('NC')):
+
+            #Note: `options dlcreatedir` lets sas create the final folder in a library path if it doesn't exist. Only the final subfolder though, otherwise it fails
+            #Note2: the merge scripts live above (..) the input folder
+            #Note3: doi folder is only used to create "root" directory, dlcreatedir doesn't support creation of nesting directly
+            sas_run_string= "options dlcreatedir; " \
+                            "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
+                            "libname doi '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"'; " \
+                            "libname e '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"'; " \
+                            "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
+                            "%include scrptfld("+merge_script+"); "    
+                            #"%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); "
+            
+            #sloppy date handling to deal with 2 digit years
+            if(dataset_year <= 7 or dataset_year > 50): #untested
+                # 2007 and earlier: Match 1
+                print("Match1")
+                sas_run_string += "%match1(0"+str(dataset_year)+"); " \
+                            "run;"
+            elif(dataset_year == 8): #untested
+                # 2008: Match 2
+                print("Match2")
+                sas_run_string += "%match2(0"+str(dataset_year)+"); " \
+                            "run;"
+            elif(dataset_year == 9):
+                # 2009 and later: Match 3 (need added 0 to run string)
+                print("Match3")
+                sas_run_string += "%match3(0"+str(dataset_year)+"); " \
+                            "run;"
+            elif(dataset_year >= 10 and dataset_year < 30):
+                # 2010 and later: Match 3
+                print("Match3")
+                sas_run_string += "%match3("+str(dataset_year)+"); " \
+                            "run;"
+
+            #TODO: Here, detect if this is the "alt" script listing and add additional to the run string:
+            print("OMG LABEL")
+            print(merge_script_folder_label)
+            if(merge_script_folder_label.endswith('regression')):
+                sas_run_string += """
+data input out e.nc{dataset_year}acrd;
+set e.nc{dataset_year}acrd;
+if severity le 5;
+run;
+
+proc logistic data = e.nc{dataset_year}acrd;
+class rodwycls rururb acctype ; 
+model severity = rodwycls rururb acctype numvehs;
+run;
+            """.format(dataset_year=dataset_year)
+
+# libname f '/folders/myfolders/newer merge stuff/fakebase';
+# libname f1 '/folders/myfolders/newer merge stuff/fakebase2';
+# libname data '/folders/myfolders/newer merge stuff/wadata11-12';
+
+#NOTE: doi folder is only used to create "root" directory, dlcreatedir doesn't support creation of nesting directly
+#NOTE: libname f was used to store an intermediate file, but we only care about the final and the script seems fine with overriding its own file
+        elif(merge_script.startswith('WA')):
+            sas_run_string = "options dlcreatedir; " \
+                            "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
+                            "libname doi '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"'; " \
+                            "libname f '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"'; " \
+                            "libname f1 '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"'; " \
+                            "libname data '" + settings.SAS_UPLOAD_FOLDER + "'; " \
+                            "%include scrptfld("+merge_script+"); "  
+
+            sas_run_string += "%curvacc("+str(dataset_year).zfill(2)+"); " \
+                            "run;"
+
+
+
 
         print(sas_run_string)
         print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
 
         #http://irss-dls-buildbox.irss.unc.edu:8888/output/doi1033563FK27RLCDC/
-        dlpath = settings.SAS_URL + ":8888/output/"+get_folder_name_from_doi_helper(dataset_doi)
+        dlpath = settings.SAS_URL + ":8888/output/"+doi_folder_name+"/"+merge_script_folder_label
         dlpathtext = "Merge Results"
+        #http://localhost:8000/createdataset?datasetPid=doi:10.33563/FK2/7INTCZ&mergeScript=WA_2-Lane_Curve_Crashes
+        dvuppath = "createdataset?datasetPid="+dataset_doi+"&mergeScript="+merge_script_folder_label
+        dvuppathtext = "Upload Results to Dataverse"
         sas_conn.endsas()
 
         #TODO: redirect to a different page so that the form can't resubmit on refresh
 
-    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath, 'dlpathtext': dlpathtext})
+    return render(request, 'hsis_sas_merge/form_define_merge.html', {'form': form, 'dlpath': dlpath, 'dlpathtext': dlpathtext, 'dvuppath': dvuppath, 'dvuppathtext': dvuppathtext})
 
 #Downloads files from dataverse to webserver and then uploads them to saspy
 #TODO: Move this to a util folder
@@ -159,11 +232,14 @@ def download_file_from_dataset_helper(folder_name, url):
 #TODO: Check success of upload, involves parsing json
 def upload_folder_to_sas_helper(folder_name, sas_conn):
     print("UPLOAD")
+    
     for entry in os.scandir(settings.MEDIA_ROOT+'/data/'+folder_name):
         if entry.is_file():
+            #sas_conn = saspy.SASsession(cfgname='ssh')
             print(entry.path)
             #print(sas_conn.saslog())
             print(sas_conn.upload(entry.path, settings.SAS_UPLOAD_FOLDER +"/"+entry.name, overwrite=False))
+            #sas_conn.endsas()
 
 ## This is broken, at least in OSX. blows up with a socket error
 #
@@ -199,6 +275,7 @@ def clear_all_downloads(request):
     sas_conn = saspy.SASsession(cfgname='ssh')
     # looks like you can just call *nix commands
     sas_run_string = "x 'rm -r "+settings.SAS_UPLOAD_FOLDER+"/*';\n" \
+        "x 'rm -r "+settings.SAS_DOWNLOAD_FOLDER+"/*';\n" \
         "run;"
     # sas_run_string= "data _null_;\n " \
     #             "   filename deldir '"+settings.SAS_UPLOAD_FOLDER+"/test';\n " \
@@ -209,5 +286,30 @@ def clear_all_downloads(request):
     print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
     sas_conn.endsas()
     return_string += "<br><br> Cleared SAS folder " + settings.SAS_UPLOAD_FOLDER
+    return_string += "<br> Cleared SAS folder " + settings.SAS_DOWNLOAD_FOLDER
+
+    #TODO: also clear SAS output directory
 
     return HttpResponse(return_string)
+
+def trigger_result_upload_to_dataset_from_sas(request):
+    print(request.GET.get('datasetPid'))
+    print(request.GET.get('mergeScript'))
+
+    sas_conn = saspy.SASsession(cfgname='ssh')
+    # looks like you can just call *nix commands
+    #NOTE: This is unsanitized
+    sas_run_string = "x 'bash /sasdata/dataset_upload.bash "+request.GET.get('datasetPid')+ " \"" +request.GET.get('mergeScript')+"\"' \n"\
+                            "run;"
+    print(sas_run_string)
+    print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
+    sas_conn.endsas()
+
+    #return_string = "Triggered creation"
+
+    #hardcoded pid for demo
+    return redirect("https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId=doi:10.33563/FK2/HZCZMK&version=DRAFT")
+    #return redirect("https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId="+request.GET.get('datasetPid')+"&version=DRAFT")
+
+    #https://highwaysafetytest.irss.unc.edu/dataset.xhtml?persistentId=doi:10.33563/FK2/7INTCZ&version=DRAFT
+    #return HttpResponse(return_string)

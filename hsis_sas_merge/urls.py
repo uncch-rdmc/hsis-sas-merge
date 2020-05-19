@@ -21,5 +21,6 @@ from django.urls import path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index),
-    path('cleardata', views.clear_all_downloads)
+    path('cleardata', views.clear_all_downloads),
+    path('createdataset', views.trigger_result_upload_to_dataset_from_sas)
 ]
