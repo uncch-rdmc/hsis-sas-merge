@@ -11,7 +11,8 @@ class HSISMergeForm(forms.Form):
         ('NC|15|doi:10.33563/FK2/7RLCDC', 'NC 2015'),
         ('WA|11|doi:10.33563/FK2/FLFRU9', 'WA 2011'),
         ('WA|12|doi:10.33563/FK2/A58P7I', 'WA 2012'),
-        ('other', 'other') #unsupported currently
+        ('WA|9999|doi:10.33563/FK2/1MMFIN', 'WA QaQc'),
+        ('other', 'other')
     ]
 
     YEAR_CHOICES = [
@@ -46,6 +47,7 @@ class HSISMergeForm(forms.Form):
         ('NC_merging_data_for_2017_django_modular.sas', 'NC Merging Data'),
         ('NC_HSISDataverse_SAS_ordered-logistic-NC-madified-further.sas', 'NC Merging Data with regression'),
         ('WA_ACCURV_modular.sas', 'WA 2-Lane Curve Crashes'),
+        ('HSISDataverse_SAS_QAQC_rev_modular.sas','HSIS Dataverse WA QAQC')
         #('filename 2', 'Merge 1'),
     ]
 

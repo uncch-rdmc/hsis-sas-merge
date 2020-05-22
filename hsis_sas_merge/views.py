@@ -105,6 +105,7 @@ def index(request):
                             "%include scrptfld("+merge_script+"); "    
                             #"%include scrptfld(NC_merging_data_for_2017_modifiedByAS_forServer_nolibs_dupe.sas); "
             
+            
             #sloppy date handling to deal with 2 digit years
             if(dataset_year <= 7 or dataset_year > 50): #untested
                 # 2007 and earlier: Match 1
@@ -161,8 +162,21 @@ run;
             sas_run_string += "%curvacc("+str(dataset_year).zfill(2)+"); " \
                             "run;"
 
+        #We don't specify the year for this one
+        #doi and f are only used to create folders
+        elif(merge_script.startswith('HSIS')):
+            sas_run_string = "options dlcreatedir; " \
+                            "filename scrptfld '"+ settings.SAS_UPLOAD_FOLDER +"/..'; " \
+                            "libname HSISDV '" + settings.SAS_UPLOAD_FOLDER + "'; " \
+                            "%let Libx=HSISDV;" \
+                            "libname doi '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"'; " \
+                            "libname f '" + settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"'; " \
+                            "%let dir="+ settings.SAS_DOWNLOAD_FOLDER + "/" + doi_folder_name +"/"+merge_script_folder_label+"; " \
+                            "%include scrptfld("+merge_script+");run;"  
 
-
+# libname HSISDV '/folders/myfolders/QaQc_OneDrive_1_5-21-2020';
+# %let Libx=HSISDV;
+# %let dir=/folders/myfolders/output;
 
         print(sas_run_string)
         print(str(sas_conn.submit(sas_run_string)).replace('\\n', '\n'))
