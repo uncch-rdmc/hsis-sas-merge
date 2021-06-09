@@ -1,4 +1,4 @@
 requests==2.23.0
-Django==2.2.11
+Django==2.2.22
 saspy==3.3.5
 #https://github.com/sassoftware/saspy/archive/master.zip
